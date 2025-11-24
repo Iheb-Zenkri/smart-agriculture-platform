@@ -1,0 +1,37 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: parcel-service
+
+  datasource:
+    url: "jdbc:postgresql://ep-wandering-bird-agnimy3r-pooler.c-2.eu-central-1.aws.neon.tech/ParcelServiceDB?user=neondb_owner&password=npg_j3bLEJcONF6r&sslmode=require&channelBinding=require"
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+# OpenAPI Documentation
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+# Logging
+logging:
+  level:
+    com.smartagri.parcel: DEBUG
+    org.hibernate.SQL: DEBUG

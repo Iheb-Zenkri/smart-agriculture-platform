@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  parcel-service:
+    build: ./parcel-service
+    environment:
+      SPRING_DATASOURCE_URL: ${PARCEL_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${PARCEL_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${PARCEL_DB_PASS}
+    networks:
+      - smart-agri-network
+
+  weather-service:
+    build: ./weather-service
+    environment:
+      SPRING_DATASOURCE_URL: ${WEATHER_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${WEATHER_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${WEATHER_DB_PASS}
+    networks:
+      - smart-agri-network
+
+  recommendation-service:
+    build: ./recommendation-service
+    environment:
+      SPRING_DATASOURCE_URL: ${RECOMMENDATION_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${RECOMMENDATION_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${RECOMMENDATION_DB_PASS}
+    networks:
+      - smart-agri-network
+
+  alert-service:
+    build: ./alert-service
+    environment:
+      SPRING_DATASOURCE_URL: ${ALERT_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${ALERT_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${ALERT_DB_PASS}
+    networks:
+      - smart-agri-network
+
+networks:
+  smart-agri-network:
+    driver: bridge
