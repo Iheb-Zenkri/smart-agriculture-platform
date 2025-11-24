@@ -12,7 +12,13 @@
         </processorPath>
         <module name="parcel-service" />
       </profile>
-      <profile name="Annotation profile for alert-service" enabled="true">
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="api-gateway" />
+      </profile>
+      <profile name="Annotation profile for weather-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -28,6 +34,7 @@
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="alert-service" options="-parameters" />
+      <module name="api-gateway" options="-parameters" />
       <module name="parcel-service" options="-parameters" />
       <module name="recommendation-service" options="-parameters" />
       <module name="weather-service" options="-parameters" />
