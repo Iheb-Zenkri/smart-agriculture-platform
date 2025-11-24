@@ -1,12 +1,19 @@
 server:
   port: 8081
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
 
 spring:
   application:
     name: parcel-service
 
   datasource:
-    url: "jdbc:postgresql://ep-wandering-bird-agnimy3r-pooler.c-2.eu-central-1.aws.neon.tech/ParcelServiceDB?user=neondb_owner&password=npg_j3bLEJcONF6r&sslmode=require&channelBinding=require"
+    url: jdbc:postgresql://ep-wandering-bird-agnimy3r-pooler.c-2.eu-central-1.aws.neon.tech/ParcelServiceDB?sslmode=require&channelBinding=require
+    username: neondb_owner
+    password: npg_j3bLEJcONF6r
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -17,21 +24,46 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+    open-in-view: false
 
   jackson:
     serialization:
       write-dates-as-timestamps: false
+      indent-output: true
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
 
 # OpenAPI Documentation
 springdoc:
   api-docs:
     path: /api-docs
+    enabled: true
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+  show-actuator: true
 
 # Logging
 logging:
   level:
+    root: INFO
     com.smartagri.parcel: DEBUG
+    org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/parcel-service.log
+    max-size: 10MB
+    max-history: 30

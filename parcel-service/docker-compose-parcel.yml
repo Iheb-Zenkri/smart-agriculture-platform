@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres-parcel:
+    image: postgres:15-alpine
+    container_name: postgres-parcel
+    environment:
+      POSTGRES_DB: parcel_db
+      POSTGRES_USER: parcel_user
+      POSTGRES_PASSWORD: parcel_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - parcel_data:/var/lib/postgresql/data
+    networks:
+      - parcel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parcel_user -d parcel_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  parcel-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: parcel-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      postgres-parcel:
+        condition: service_healthy
+    networks:
+      - parcel-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  parcel_data:
+
+networks:
+  parcel-network:
+    driver: bridge
