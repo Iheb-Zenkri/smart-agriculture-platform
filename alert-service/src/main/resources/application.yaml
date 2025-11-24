@@ -1,0 +1,24 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: alert-service
+
+  datasource:
+    url: "jdbc:postgresql://ep-wandering-bird-agnimy3r-pooler.c-2.eu-central-1.aws.neon.tech/AlertServiceDB?user=neondb_owner&password=npg_j3bLEJcONF6r&sslmode=require&channelBinding=require"
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9090
+
+logging:
+  level:
+    com.smartagri.alert: DEBUG
