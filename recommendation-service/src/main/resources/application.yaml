@@ -1,0 +1,34 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: recommendation-service
+
+  datasource:
+    url: "jdbc:postgresql://ep-wandering-bird-agnimy3r-pooler.c-2.eu-central-1.aws.neon.tech/RecommendationDB?user=neondb_owner&password=npg_j3bLEJcONF6r&sslmode=require&channelBinding=require"
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  graphql:
+    graphiql:
+      enabled: true
+      path: /graphiql
+    path: /graphql
+    schema:
+      printer:
+        enabled: true
+services:
+  parcel-service:
+    url: http://localhost:8081
+  weather-service:
+    url: http://localhost:8082/ws
+
+logging:
+  level:
+    com.smartagri.recommendation: DEBUG
+    graphql: DEBUG
