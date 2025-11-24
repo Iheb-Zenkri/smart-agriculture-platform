@@ -1,0 +1,25 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: weather-service
+
+  datasource:
+    url: "jdbc:postgresql://ep-wandering-bird-agnimy3r-pooler.c-2.eu-central-1.aws.neon.tech/WeatherServiceDB?user=neondb_owner&password=npg_j3bLEJcONF6r&sslmode=require&channelBinding=require"
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+weather:
+  api:
+    openmeteo:
+      base-url: https://api.open-meteo.com/v1/forecast
+
+
+logging:
+  level:
+    com.smartagri.weather: DEBUG
