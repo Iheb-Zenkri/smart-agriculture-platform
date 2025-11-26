@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="http://smartagri.com/weather"
+           targetNamespace="http://smartagri.com/weather"
+           elementFormDefault="qualified">
+
+    <xs:complexType name="weatherInfo">
+        <xs:sequence>
+            <xs:element name="location" type="xs:string"/>
+            <xs:element name="date" type="xs:date"/>
+            <xs:element name="temperatureMin" type="xs:decimal"/>
+            <xs:element name="temperatureMax" type="xs:decimal"/>
+            <xs:element name="temperatureAvg" type="xs:decimal"/>
+            <xs:element name="humidity" type="xs:decimal"/>
+            <xs:element name="precipitation" type="xs:decimal"/>
+            <xs:element name="windSpeed" type="xs:decimal"/>
+            <xs:element name="pressure" type="xs:decimal"/>
+            <xs:element name="weatherCondition" type="xs:string"/>
+            <xs:element name="cloudCover" type="xs:int" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="getWeatherRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="location" type="xs:string"/>
+                <xs:element name="date" type="xs:date"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getWeatherResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="weatherInfo" type="tns:weatherInfo"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getHistoricalWeatherRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="location" type="xs:string"/>
+                <xs:element name="startDate" type="xs:date"/>
+                <xs:element name="endDate" type="xs:date"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getHistoricalWeatherResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="weatherInfoList" type="tns:weatherInfo" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="compareWeatherRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="location1" type="xs:string"/>
+                <xs:element name="location2" type="xs:string"/>
+                <xs:element name="date" type="xs:date"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="compareWeatherResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="location1Weather" type="tns:weatherInfo"/>
+                <xs:element name="location2Weather" type="tns:weatherInfo"/>
+                <xs:element name="comparison" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getClimateIndexRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="location" type="xs:string"/>
+                <xs:element name="date" type="xs:date"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getClimateIndexResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="location" type="xs:string"/>
+                <xs:element name="date" type="xs:date"/>
+                <xs:element name="growingDegreeDays" type="xs:decimal"/>
+                <xs:element name="evapotranspiration" type="xs:decimal"/>
+                <xs:element name="droughtIndex" type="xs:decimal"/>
+                <xs:element name="heatStressIndex" type="xs:decimal"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres-weather:
+    image: postgres:15-alpine
+    container_name: postgres-weather
+    environment:
+      POSTGRES_DB: weather_db
+      POSTGRES_USER: weather_user
+      POSTGRES_PASSWORD: weather_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - weather_data:/var/lib/postgresql/data
+    networks:
+      - weather-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weather_user -d weather_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  weather-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weather-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-weather:5432/weather_db
+      SPRING_DATASOURCE_USERNAME: weather_user
+      SPRING_DATASOURCE_PASSWORD: weather_pass
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      postgres-weather:
+        condition: service_healthy
+    networks:
+      - weather-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  weather_data:
+
+networks:
+  weather-network:
+    driver: bridge
