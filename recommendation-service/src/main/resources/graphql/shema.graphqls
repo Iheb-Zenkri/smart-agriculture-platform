@@ -1,0 +1,115 @@
+# Scalar types
+scalar Date
+scalar Decimal
+
+# ============================================================================
+# TYPES
+# ============================================================================
+
+type IrrigationRecommendation {
+    id: ID!
+    parcelId: ID!
+    recommendationDate: Date!
+    waterAmount: Decimal!
+    irrigationFrequency: String!
+    optimalTime: String!
+    reasoning: String!
+    confidenceScore: Decimal!
+    weatherFactors: WeatherFactors!
+}
+
+type WeatherFactors {
+    temperature: Decimal!
+    humidity: Decimal!
+    precipitation: Decimal!
+}
+
+type FertilizationRecommendation {
+    id: ID!
+    parcelId: ID!
+    cropId: ID!
+    recommendationDate: Date!
+    fertilizerType: String!
+    npkRatio: String!
+    quantity: Decimal!
+    applicationMethod: String!
+    reasoning: String!
+    growthStage: String
+    soilType: String
+}
+
+type TreatmentRecommendation {
+    id: ID!
+    parcelId: ID!
+    cropId: ID!
+    recommendationDate: Date!
+    treatmentType: String!
+    productName: String!
+    dosage: String!
+    targetPest: String!
+    applicationTiming: String!
+    reasoning: String!
+    weatherConditions: String
+}
+
+type CropPlan {
+    id: ID!
+    parcelId: ID!
+    recommendedCrop: String!
+    recommendedVariety: String
+    plantingDate: Date
+    expectedHarvestDate: Date
+    expectedYield: Decimal
+    confidenceScore: Decimal!
+    reasoning: String!
+    soilSuitability: String
+    climateSuitability: String
+}
+
+# ============================================================================
+# QUERIES
+# ============================================================================
+
+type Query {
+    # Irrigation Recommendations
+    irrigationRecommendation(id: ID!): IrrigationRecommendation
+    irrigationRecommendationsByParcel(parcelId: ID!): [IrrigationRecommendation!]!
+    latestIrrigationRecommendation(parcelId: ID!): IrrigationRecommendation
+
+    # Fertilization Recommendations
+    fertilizationRecommendation(id: ID!): FertilizationRecommendation
+    fertilizationRecommendationsByCrop(cropId: ID!): [FertilizationRecommendation!]!
+
+    # Treatment Recommendations
+    treatmentRecommendation(id: ID!): TreatmentRecommendation
+    treatmentRecommendationsByCrop(cropId: ID!): [TreatmentRecommendation!]!
+    upcomingTreatments(cropId: ID!): [TreatmentRecommendation!]!
+
+    # Crop Plans
+    cropPlan(id: ID!): CropPlan
+    cropPlansByParcel(parcelId: ID!): [CropPlan!]!
+    bestCropPlan(parcelId: ID!): CropPlan
+
+    # Complex Queries
+    allRecommendationsForParcel(parcelId: ID!): [Recommendation!]!
+}
+
+union Recommendation = IrrigationRecommendation | FertilizationRecommendation | TreatmentRecommendation | CropPlan
+
+# ============================================================================
+# MUTATIONS
+# ============================================================================
+
+type Mutation {
+    # Generate Recommendations
+    generateIrrigationRecommendation(parcelId: ID!): IrrigationRecommendation!
+    generateFertilizationRecommendation(cropId: ID!): FertilizationRecommendation!
+    generateTreatmentRecommendation(cropId: ID!): TreatmentRecommendation!
+    generateCropPlan(parcelId: ID!): CropPlan!
+
+    # Delete Recommendations
+    deleteIrrigationRecommendation(id: ID!): Boolean!
+    deleteFertilizationRecommendation(id: ID!): Boolean!
+    deleteTreatmentRecommendation(id: ID!): Boolean!
+    deleteCropPlan(id: ID!): Boolean!
+}

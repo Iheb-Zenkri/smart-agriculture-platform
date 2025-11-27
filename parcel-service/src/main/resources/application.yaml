@@ -56,14 +56,4 @@ springdoc:
 # Logging
 logging:
   level:
-    root: INFO
     com.smartagri.parcel: DEBUG
-    org.springframework.web: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-  pattern:
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-  file:
-    name: logs/parcel-service.log
-    max-size: 10MB
-    max-history: 30

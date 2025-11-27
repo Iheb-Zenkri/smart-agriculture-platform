@@ -22,6 +22,7 @@ spring:
     schema:
       printer:
         enabled: true
+
 services:
   parcel-service:
     url: http://localhost:8081

@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres-recommendation:
+    image: postgres:15-alpine
+    container_name: postgres-recommendation
+    environment:
+      POSTGRES_DB: recommendation_db
+      POSTGRES_USER: recommendation_user
+      POSTGRES_PASSWORD: recommendation_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - recommendation_data:/var/lib/postgresql/data
+    networks:
+      - recommendation-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recommendation_user -d recommendation_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  recommendation-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: recommendation-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-recommendation:5432/recommendation_db
+      SPRING_DATASOURCE_USERNAME: recommendation_user
+      SPRING_DATASOURCE_PASSWORD: recommendation_pass
+      SPRING_PROFILES_ACTIVE: prod
+      PARCEL_SERVICE_URL: http://parcel-service:8081
+      WEATHER_SERVICE_URL: http://weather-service:8082/ws
+    depends_on:
+      postgres-recommendation:
+        condition: service_healthy
+    networks:
+      - recommendation-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  recommendation_data:
+
+networks:
+  recommendation-network:
+    driver: bridge
