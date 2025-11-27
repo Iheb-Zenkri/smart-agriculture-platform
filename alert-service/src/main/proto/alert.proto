@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.smartagri.alert.grpc.generated";
+option java_outer_classname = "AlertServiceProto";
+
+package alert;
+
+// Alert Service Definition
+service AlertService {
+  // Stream alerts in real-time
+  rpc StreamAlerts(StreamAlertsRequest) returns (stream AlertResponse);
+
+  // Create a new alert
+  rpc CreateAlert(CreateAlertRequest) returns (AlertResponse);
+
+  // Get alert by ID
+  rpc GetAlert(GetAlertRequest) returns (AlertResponse);
+
+  // Get active alerts
+  rpc GetActiveAlerts(GetActiveAlertsRequest) returns (AlertListResponse);
+
+  // Acknowledge an alert
+  rpc AcknowledgeAlert(AcknowledgeAlertRequest) returns (AlertResponse);
+
+  // Dismiss an alert
+  rpc DismissAlert(DismissAlertRequest) returns (DismissAlertResponse);
+
+  // Subscribe to alerts
+  rpc SubscribeToAlerts(SubscribeRequest) returns (SubscribeResponse);
+
+  // Get subscription
+  rpc GetSubscription(GetSubscriptionRequest) returns (SubscriptionResponse);
+}
+
+// Messages
+
+message StreamAlertsRequest {
+  optional int64 parcel_id = 1;
+  repeated string alert_types = 2;
+  repeated string severities = 3;
+}
+
+message CreateAlertRequest {
+  string alert_type = 1;
+  string severity = 2;
+  optional int64 parcel_id = 3;
+  optional string location = 4;
+  string title = 5;
+  string message = 6;
+  optional int64 expiry_seconds = 7;
+  optional string metadata = 8;
+}
+
+message GetAlertRequest {
+  int64 alert_id = 1;
+}
+
+message GetActiveAlertsRequest {
+  optional int64 parcel_id = 1;
+  optional string alert_type = 2;
+  optional string severity = 3;
+  optional int32 limit = 4;
+}
+
+message AcknowledgeAlertRequest {
+  int64 alert_id = 1;
+  string acknowledged_by = 2;
+}
+
+message DismissAlertRequest {
+  int64 alert_id = 1;
+  string dismissed_by = 2;
+}
+
+message SubscribeRequest {
+  string user_id = 1;
+  optional int64 parcel_id = 2;
+  repeated string alert_types = 3;
+  string notification_method = 4;
+  optional string email = 5;
+  optional string phone_number = 6;
+}
+
+message GetSubscriptionRequest {
+  string user_id = 1;
+  optional int64 parcel_id = 2;
+}
+
+message AlertResponse {
+  int64 id = 1;
+  string alert_type = 2;
+  string severity = 3;
+  optional int64 parcel_id = 4;
+  optional string location = 5;
+  string title = 6;
+  string message = 7;
+  string alert_time = 8;
+  optional string expiry_time = 9;
+  bool is_active = 10;
+  bool acknowledged = 11;
+  optional string acknowledged_at = 12;
+  optional string acknowledged_by = 13;
+  optional string metadata = 14;
+}
+
+message AlertListResponse {
+  repeated AlertResponse alerts = 1;
+  int32 total_count = 2;
+}
+
+message DismissAlertResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message SubscribeResponse {
+  int64 subscription_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message SubscriptionResponse {
+  int64 id = 1;
+  string user_id = 2;
+  optional int64 parcel_id = 3;
+  repeated string alert_types = 4;
+  string notification_method = 5;
+  optional string email = 6;
+  optional string phone_number = 7;
+  bool is_enabled = 8;
+}

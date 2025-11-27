@@ -14,11 +14,44 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  task:
+    scheduling:
+      pool:
+        size: 5
+
 # gRPC Configuration
 grpc:
   server:
-    port: 9090
+    port: 9095
+    max-inbound-message-size: 4MB
+    max-inbound-metadata-size: 8KB
+    enable-keep-alive: true
+    keep-alive-time: 30s
+    keep-alive-timeout: 10s
+    permit-keep-alive-without-calls: true
 
 logging:
   level:
     com.smartagri.alert: DEBUG
+
+alert:
+  expiry:
+    check-interval: 300000 # 5 minutes in milliseconds
+  notification:
+    retry-attempts: 3
+    retry-delay: 5000 # 5 seconds
+  statistics:
+    log-interval: 3600000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
