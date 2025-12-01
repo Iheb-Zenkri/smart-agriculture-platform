@@ -23,4 +23,7 @@ public interface AlertSubscriptionRepository extends JpaRepository<AlertSubscrip
     List<AlertSubscription> findEnabledSubscriptionsForParcel(@Param("parcelId") Long parcelId);
 
     List<AlertSubscription> findByIsEnabledTrue();
+
+    long countByIsEnabledTrue();
+
 }

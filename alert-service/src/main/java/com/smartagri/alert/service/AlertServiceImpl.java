@@ -1,5 +1,6 @@
 package com.smartagri.alert.service;
 
+import com.smartagri.alert.dto.AlertSearchCriteria;
 import com.smartagri.alert.exception.AlertNotFoundException;
 import com.smartagri.alert.model.Alert;
 import com.smartagri.alert.model.AlertHistory;
@@ -7,13 +8,20 @@ import com.smartagri.alert.model.AlertSubscription;
 import com.smartagri.alert.repository.AlertHistoryRepository;
 import com.smartagri.alert.repository.AlertRepository;
 import com.smartagri.alert.repository.AlertSubscriptionRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +33,9 @@ public class AlertServiceImpl implements AlertService {
     private final AlertRepository alertRepository;
     private final AlertSubscriptionRepository subscriptionRepository;
     private final AlertHistoryRepository historyRepository;
+
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final long RETRY_DELAY_MS = 5000;
 
     @Override
     public Alert createAlert(Alert.AlertType alertType, Alert.AlertSeverity severity, Long parcelId,
@@ -104,6 +115,57 @@ public class AlertServiceImpl implements AlertService {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<String, Long> getAlertStatistics(Long parcelId) {
+        Map<String, Long> stats = new HashMap<>();
+
+        if (parcelId != null) {
+            stats.put("total", alertRepository.countByParcelId(parcelId));
+            stats.put("active", alertRepository.countByParcelIdAndIsActiveTrue(parcelId));
+            stats.put("unacknowledged", alertRepository.countByParcelIdAndIsActiveTrueAndAcknowledgedFalse(parcelId));
+        } else {
+            stats.put("total", alertRepository.count());
+            stats.put("active", alertRepository.countByIsActiveTrue());
+            stats.put("unacknowledged", alertRepository.countByIsActiveTrueAndAcknowledgedFalse());
+        }
+
+        return stats;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Alert> searchAlerts(AlertSearchCriteria criteria, Pageable pageable) {
+        log.info("Searching alerts with criteria: {}", criteria);
+
+        return alertRepository.findAll((root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (criteria.getParcelId() != null) {
+                predicates.add(cb.equal(root.get("parcelId"), criteria.getParcelId()));
+            }
+            if (criteria.getAlertType() != null) {
+                predicates.add(cb.equal(root.get("alertType"), criteria.getAlertType()));
+            }
+            if (criteria.getSeverity() != null) {
+                predicates.add(cb.equal(root.get("severity"), criteria.getSeverity()));
+            }
+            if (criteria.getIsActive() != null) {
+                predicates.add(cb.equal(root.get("isActive"), criteria.getIsActive()));
+            }
+            if (criteria.getAcknowledged() != null) {
+                predicates.add(cb.equal(root.get("acknowledged"), criteria.getAcknowledged()));
+            }
+            if (criteria.getStartDate() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("alertTime"), criteria.getStartDate()));
+            }
+            if (criteria.getEndDate() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("alertTime"), criteria.getEndDate()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        }, pageable);
+    }
+    @Override
+    @Transactional(readOnly = true)
     public List<Alert> getUnacknowledgedAlerts() {
         log.info("Getting unacknowledged alerts");
         return alertRepository.findUnacknowledgedAlerts();
@@ -131,6 +193,33 @@ public class AlertServiceImpl implements AlertService {
 
         log.info("Alert {} acknowledged successfully", alertId);
         return updatedAlert;
+    }
+
+    @Override
+    @Transactional
+    public List<Alert> acknowledgeMultipleAlerts(List<Long> alertIds, String acknowledgedBy) {
+        log.info("Bulk acknowledging {} alerts by: {}", alertIds.size(), acknowledgedBy);
+
+        List<Alert> acknowledgedAlerts = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        for (Long alertId : alertIds) {
+            try {
+                Alert alert = alertRepository.findById(alertId).orElse(null);
+                if (alert != null && !alert.getAcknowledged()) {
+                    alert.setAcknowledged(true);
+                    alert.setAcknowledgedBy(acknowledgedBy);
+                    alert.setAcknowledgedAt(now);
+                    acknowledgedAlerts.add(alertRepository.save(alert));
+                    recordHistory(alertId, "ACKNOWLEDGED", acknowledgedBy, "Bulk acknowledgement");
+                }
+            } catch (Exception e) {
+                log.error("Failed to acknowledge alert {}: {}", alertId, e.getMessage());
+            }
+        }
+
+        log.info("Successfully acknowledged {} out of {} alerts", acknowledgedAlerts.size(), alertIds.size());
+        return acknowledgedAlerts;
     }
 
     @Override
@@ -223,14 +312,15 @@ public class AlertServiceImpl implements AlertService {
                         sub.getAlertTypes().contains(alertTypeName))
                 .collect(Collectors.toList());
 
-        // Send notifications
-        for (AlertSubscription subscription : subscriptions) {
-            sendNotification(subscription, alert);
-        }
+        // Send notifications asynchronously with retry
+        subscriptions.forEach(subscription ->
+                CompletableFuture.runAsync(() ->
+                        sendNotification(subscription, alert)
+                )
+        );
 
-        log.info("Notified {} subscribers", subscriptions.size());
+        log.info("Queued notifications for {} subscribers", subscriptions.size());
     }
-
     @Override
     @Transactional(readOnly = true)
     public long countUnacknowledgedAlerts() {
@@ -241,6 +331,54 @@ public class AlertServiceImpl implements AlertService {
     @Transactional(readOnly = true)
     public long countUnacknowledgedAlertsByParcel(Long parcelId) {
         return alertRepository.countByParcelIdAndIsActiveTrueAndAcknowledgedFalse(parcelId);
+    }
+
+    @Override
+    public Map<String, Object> getServiceHealth() {
+        Map<String, Object> health = new HashMap<>();
+
+        try {
+            long activeAlerts = alertRepository.countByIsActiveTrue();
+            long unacknowledged = alertRepository.countByIsActiveTrueAndAcknowledgedFalse();
+            long subscriptions = subscriptionRepository.countByIsEnabledTrue();
+
+            health.put("status", "UP");
+            health.put("activeAlerts", activeAlerts);
+            health.put("unacknowledgedAlerts", unacknowledged);
+            health.put("activeSubscriptions", subscriptions);
+            health.put("timestamp", LocalDateTime.now());
+        } catch (Exception e) {
+            health.put("status", "DOWN");
+            health.put("error", e.getMessage());
+        }
+
+        return health;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getAlertTrends(Long parcelId, int days) {
+        log.info("Getting alert trends for parcel: {}, days: {}", parcelId, days);
+
+        LocalDateTime startDate = LocalDateTime.now().minusDays(days);
+        List<Alert> alerts;
+
+        if (parcelId != null) {
+            alerts = alertRepository.findByParcelIdAndAlertTimeAfter(parcelId, startDate);
+        } else {
+            alerts = alertRepository.findByAlertTimeAfter(startDate);
+        }
+
+        Map<String, Object> trends = new HashMap<>();
+        trends.put("totalAlerts", alerts.size());
+        trends.put("byType", alerts.stream()
+                .collect(Collectors.groupingBy(Alert::getAlertType, Collectors.counting())));
+        trends.put("bySeverity", alerts.stream()
+                .collect(Collectors.groupingBy(Alert::getSeverity, Collectors.counting())));
+        trends.put("acknowledgedRate", calculateAcknowledgementRate(alerts));
+        trends.put("avgResponseTime", calculateAverageResponseTime(alerts));
+
+        return trends;
     }
 
     // Helper methods
@@ -255,41 +393,45 @@ public class AlertServiceImpl implements AlertService {
     }
 
     private void sendNotification(AlertSubscription subscription, Alert alert) {
-        // In production, this would send actual notifications
-        log.info("Sending {} notification to user {} for alert {}",
-                subscription.getNotificationMethod(),
-                subscription.getUserId(),
-                alert.getId());
+        int attempts = 0;
+        Exception lastException = null;
 
-        switch (subscription.getNotificationMethod()) {
-            case EMAIL -> sendEmailNotification(subscription.getEmail(), alert);
-            case SMS -> sendSmsNotification(subscription.getPhoneNumber(), alert);
-            case PUSH -> sendPushNotification(subscription.getUserId(), alert);
-            case IN_APP -> sendInAppNotification(subscription.getUserId(), alert);
-            case ALL -> {
-                sendEmailNotification(subscription.getEmail(), alert);
-                sendPushNotification(subscription.getUserId(), alert);
+        while (attempts < MAX_RETRY_ATTEMPTS) {
+            try {
+                sendNotification(subscription, alert);
+                log.info("Notification sent successfully on attempt {}", attempts + 1);
+                return;
+            } catch (Exception e) {
+                lastException = e;
+                attempts++;
+                log.warn("Notification attempt {} failed: {}", attempts, e.getMessage());
+
+                if (attempts < MAX_RETRY_ATTEMPTS) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
             }
         }
+        log.error("Failed to send notification after {} attempts", MAX_RETRY_ATTEMPTS, lastException);
     }
 
-    private void sendEmailNotification(String email, Alert alert) {
-        // Email sending implementation
-        log.info("Email notification sent to: {} for alert: {}", email, alert.getId());
+    private double calculateAcknowledgementRate(List<Alert> alerts) {
+        if (alerts.isEmpty()) return 0.0;
+        long acknowledged = alerts.stream().filter(Alert::getAcknowledged).count();
+        return (double) acknowledged / alerts.size() * 100;
     }
 
-    private void sendSmsNotification(String phoneNumber, Alert alert) {
-        // SMS sending implementation
-        log.info("SMS notification sent to: {} for alert: {}", phoneNumber, alert.getId());
-    }
+    private long calculateAverageResponseTime(List<Alert> alerts) {
+        List<Long> responseTimes = alerts.stream()
+                .filter(a -> a.getAcknowledged() && a.getAcknowledgedAt() != null)
+                .map(a -> java.time.Duration.between(a.getAlertTime(), a.getAcknowledgedAt()).toMinutes())
+                .toList();
 
-    private void sendPushNotification(String userId, Alert alert) {
-        // Push notification implementation
-        log.info("Push notification sent to user: {} for alert: {}", userId, alert.getId());
-    }
-
-    private void sendInAppNotification(String userId, Alert alert) {
-        // In-app notification implementation
-        log.info("In-app notification sent to user: {} for alert: {}", userId, alert.getId());
+        if (responseTimes.isEmpty()) return 0;
+        return (long) responseTimes.stream().mapToLong(Long::longValue).average().orElse(0);
     }
 }

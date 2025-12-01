@@ -1,0 +1,233 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: alert-service-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-AlertServiceDB}
+      POSTGRES_USER: ${POSTGRES_USER:alertuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:alertpass123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - alert-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-alertuser} -d ${POSTGRES_DB:-AlertServiceDB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Alert Service Application
+  alert-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - MAVEN_OPTS=-Dmaven.repo.local=/root/.m2/repository
+    image: alert-service:latest
+    container_name: alert-service-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Spring Configuration
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+
+      # Database Configuration
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-AlertServiceDB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-alertuser}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-alertpass123}
+
+      # JPA/Hibernate Configuration
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL:-false}
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: true
+
+      # Connection Pool Configuration
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${DB_POOL_MIN_IDLE:-5}
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 20000
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 300000
+
+      # Server Configuration
+      SERVER_PORT: 8084
+
+      # gRPC Configuration
+      GRPC_SERVER_PORT: ${GRPC_SERVER_PORT:-9095}
+      GRPC_SERVER_REFLECTION_SERVICE_ENABLED: true
+
+      # Logging Configuration
+      LOGGING_LEVEL_ROOT: ${LOGGING_LEVEL_ROOT:-INFO}
+      LOGGING_LEVEL_COM_SMARTAGRI_ALERT: ${LOGGING_LEVEL_COM_SMARTAGRI_ALERT:-DEBUG}
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: WARN
+      LOGGING_LEVEL_ORG_HIBERNATE: WARN
+      LOGGING_FILE_NAME: /app/logs/alert-service.log
+
+      # Alert Service Configuration
+      ALERT_EXPIRY_CHECK_INTERVAL: ${ALERT_EXPIRY_CHECK_INTERVAL:-300000}
+      ALERT_NOTIFICATION_RETRY_ATTEMPTS: ${ALERT_NOTIFICATION_RETRY_ATTEMPTS:-3}
+      ALERT_NOTIFICATION_RETRY_DELAY: ${ALERT_NOTIFICATION_RETRY_DELAY:-5000}
+
+      # Actuator Configuration
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics,prometheus,env,loggers
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: true
+
+      # JVM Configuration
+      JAVA_OPTS: >-
+        -Xms${JVM_MIN_HEAP:-512m}
+        -Xmx${JVM_MAX_HEAP:-1024m}
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -XX:InitialRAMPercentage=50.0
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -XX:+OptimizeStringConcat
+        -XX:+UseStringDeduplication
+        -Djava.security.egd=file:/dev/./urandom
+        -Dfile.encoding=UTF-8
+        -Duser.timezone=UTC
+    ports:
+      - "${APP_REST_PORT:-8084}:8084"   # REST API
+      - "${APP_GRPC_PORT:-9095}:9095"   # gRPC
+    networks:
+      - alert-network
+    volumes:
+      - app_logs:/app/logs
+      - maven_cache:/root/.m2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Prometheus for Metrics Collection
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: alert-service-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - alert-network
+    depends_on:
+      - alert-service
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Grafana for Visualization
+  grafana:
+    image: grafana/grafana:10.1.4
+    container_name: alert-service-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin123}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://localhost:${GRAFANA_PORT:-3000}
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - alert-network
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # pgAdmin for Database Management (Optional - Comment out for production)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: alert-service-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@alert-service.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin-servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - alert-network
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/misc/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  alert-network:
+    driver: bridge
+    name: alert-network
+
+volumes:
+  postgres_data:
+    driver: local
+    name: alert-service-postgres-data
+  prometheus_data:
+    driver: local
+    name: alert-service-prometheus-data
+  grafana_data:
+    driver: local
+    name: alert-service-grafana-data
+  pgadmin_data:
+    driver: local
+    name: alert-service-pgadmin-data
+  app_logs:
+    driver: local
+    name: alert-service-logs
+  maven_cache:
+    driver: local
+    name: alert-service-maven-cache

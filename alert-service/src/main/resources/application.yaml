@@ -15,6 +15,11 @@ spring:
     show-sql: true
 
   task:
+    execution:
+      pool:
+        core-size: 5
+        max-size: 10
+        queue-capacity: 100
     scheduling:
       pool:
         size: 5
@@ -23,6 +28,7 @@ spring:
 grpc:
   server:
     port: 9095
+    reflection-service-enabled: true
     max-inbound-message-size: 4MB
     max-inbound-metadata-size: 8KB
     enable-keep-alive: true
@@ -41,7 +47,10 @@ alert:
     retry-attempts: 3
     retry-delay: 5000 # 5 seconds
   statistics:
-    log-interval: 3600000
+    log-interval: 3600000 # 1 hour
+  stream:
+    cleanup-interval: 60000 # 1 minute
+    max-idle-time: 300000  # 5 minutes
 
 management:
   endpoints:

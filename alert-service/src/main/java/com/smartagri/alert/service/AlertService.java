@@ -1,10 +1,15 @@
 package com.smartagri.alert.service;
 
+import com.smartagri.alert.dto.AlertSearchCriteria;
 import com.smartagri.alert.model.Alert;
 import com.smartagri.alert.model.AlertSubscription;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public interface AlertService {
 
@@ -24,9 +29,18 @@ public interface AlertService {
 
     List<Alert> getActiveAlertsSince(LocalDateTime since);
 
+    @Transactional(readOnly = true)
+    Map<String, Long> getAlertStatistics(Long parcelId);
+
+    @Transactional(readOnly = true)
+    Page<Alert> searchAlerts(AlertSearchCriteria criteria, Pageable pageable);
+
     List<Alert> getUnacknowledgedAlerts();
 
     Alert acknowledgeAlert(Long alertId, String acknowledgedBy);
+
+    @Transactional
+    List<Alert> acknowledgeMultipleAlerts(List<Long> alertIds, String acknowledgedBy);
 
     void dismissAlert(Long alertId, String dismissedBy);
 
@@ -46,4 +60,10 @@ public interface AlertService {
     long countUnacknowledgedAlerts();
 
     long countUnacknowledgedAlertsByParcel(Long parcelId);
+
+    // 7. Add health check method
+    Map<String, Object> getServiceHealth();
+
+    @Transactional(readOnly = true)
+    Map<String, Object> getAlertTrends(Long parcelId, int days);
 }
