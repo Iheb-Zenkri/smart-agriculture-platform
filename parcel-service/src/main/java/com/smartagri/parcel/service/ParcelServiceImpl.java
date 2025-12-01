@@ -97,7 +97,9 @@ public class ParcelServiceImpl implements ParcelService {
         crop.setParcel(parcel);
         Crop savedCrop = cropRepository.save(crop);
         log.info("Crop created successfully with ID: {}", savedCrop.getId());
-        return modelMapper.map(savedCrop, CropDTO.class);
+        CropDTO cropDTO = modelMapper.map(savedCrop, CropDTO.class);
+        cropDTO.setParcelId(crop.getParcel().getId());
+        return cropDTO ;
     }
 
     @Override
@@ -116,7 +118,9 @@ public class ParcelServiceImpl implements ParcelService {
 
         Crop updatedCrop = cropRepository.save(crop);
         log.info("Crop updated successfully");
-        return modelMapper.map(updatedCrop, CropDTO.class);
+        CropDTO cropDTO = modelMapper.map(updatedCrop, CropDTO.class);
+        cropDTO.setParcelId(crop.getParcel().getId());
+        return cropDTO ;
     }
 
     @Override
@@ -125,7 +129,9 @@ public class ParcelServiceImpl implements ParcelService {
         log.info("Fetching crop with ID: {}", id);
         Crop crop = cropRepository.findByIdWithHarvests(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Crop not found with id: " + id));
-        return modelMapper.map(crop, CropDTO.class);
+        CropDTO cropDTO = modelMapper.map(crop, CropDTO.class);
+        cropDTO.setParcelId(crop.getParcel().getId());
+        return cropDTO ;
     }
 
     @Override
@@ -133,8 +139,11 @@ public class ParcelServiceImpl implements ParcelService {
     public List<CropDTO> getCropsByParcelId(Long parcelId) {
         log.info("Fetching crops for parcel ID: {}", parcelId);
         return cropRepository.findByParcelId(parcelId).stream()
-                .map(crop -> modelMapper.map(crop, CropDTO.class))
-                .collect(Collectors.toList());
+                .map(crop -> {
+                    CropDTO cropDTO = modelMapper.map(crop, CropDTO.class);
+                    cropDTO.setParcelId(crop.getParcel().getId());
+                    return cropDTO ;
+                }).collect(Collectors.toList());
     }
 
     @Override
@@ -142,7 +151,11 @@ public class ParcelServiceImpl implements ParcelService {
     public List<CropDTO> getAllCrops() {
         log.info("Fetching all crops");
         return cropRepository.findAll().stream()
-                .map(crop -> modelMapper.map(crop, CropDTO.class))
+                .map(crop -> {
+                    CropDTO cropDTO = modelMapper.map(crop, CropDTO.class);
+                    cropDTO.setParcelId(crop.getParcel().getId());
+                    return cropDTO ;
+                })
                 .collect(Collectors.toList());
     }
 

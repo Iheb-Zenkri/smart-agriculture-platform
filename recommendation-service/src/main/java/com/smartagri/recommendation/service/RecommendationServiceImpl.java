@@ -303,10 +303,13 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Override
     public List<Object> getAllRecommendationsForParcel(Long parcelId) {
         log.info("Getting all recommendations for parcel: {}", parcelId);
-        List<Object> all = new ArrayList<>();
-        all.addAll(getIrrigationRecommendationsByParcel(parcelId));
-        all.addAll(getCropPlansByParcel(parcelId));
-        return all;
+        List<IrrigationRecommendationDTO> irrigation = getIrrigationRecommendationsByParcel(parcelId);
+        List<FertilizationRecommendationDTO> fertilization = getFertilizationRecommendationsByCrop(parcelId);
+        List<Object> combined = new ArrayList<>();
+        combined.addAll(irrigation);
+        combined.addAll(fertilization);
+        return combined;
+
     }
 
     // ========================================================================

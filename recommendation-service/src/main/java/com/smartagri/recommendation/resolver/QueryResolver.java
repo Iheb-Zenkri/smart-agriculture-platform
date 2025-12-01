@@ -18,7 +18,6 @@ public class QueryResolver {
 
     private final RecommendationService recommendationService;
 
-    // Irrigation Recommendations
     @QueryMapping
     public IrrigationRecommendationDTO irrigationRecommendation(@Argument Long id) {
         log.info("GraphQL Query: irrigationRecommendation(id: {})", id);

@@ -92,6 +92,8 @@ type Query {
 
     # Complex Queries
     allRecommendationsForParcel(parcelId: ID!): [Recommendation!]!
+
+
 }
 
 union Recommendation = IrrigationRecommendation | FertilizationRecommendation | TreatmentRecommendation | CropPlan
