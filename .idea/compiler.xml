@@ -17,8 +17,9 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="api-gateway" />
-        <module name="alert-service" />
         <module name="weather-service" />
+        <module name="alert-service" />
+        <module name="eureka-server" />
       </profile>
       <profile name="Annotation profile for recommendation-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -35,6 +36,7 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="alert-service" options="-parameters" />
       <module name="api-gateway" options="-parameters" />
+      <module name="eureka-server" options="-parameters" />
       <module name="parcel-service" options="-parameters" />
       <module name="recommendation-service" options="-parameters" />
       <module name="weather-service" options="-parameters" />

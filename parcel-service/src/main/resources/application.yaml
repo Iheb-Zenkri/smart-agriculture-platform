@@ -57,3 +57,22 @@ springdoc:
 logging:
   level:
     com.smartagri.parcel: DEBUG
+
+#Eureka client
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,loggers
+      base-path: /actuator
