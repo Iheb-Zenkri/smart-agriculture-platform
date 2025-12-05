@@ -36,7 +36,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     // ========================================================================
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public IrrigationRecommendationDTO getIrrigationRecommendation(Long id) {
         log.info("Getting irrigation recommendation with ID: {}", id);
         IrrigationRecommendation recommendation = irrigationRepository.findById(id)
@@ -45,7 +45,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<IrrigationRecommendationDTO> getIrrigationRecommendationsByParcel(Long parcelId) {
         log.info("Getting irrigation recommendations for parcel: {}", parcelId);
         return irrigationRepository.findByParcelId(parcelId).stream()
@@ -54,7 +54,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public IrrigationRecommendationDTO getLatestIrrigationRecommendation(Long parcelId) {
         log.info("Getting latest irrigation recommendation for parcel: {}", parcelId);
         List<IrrigationRecommendation> recommendations = irrigationRepository.findLatestByParcelId(parcelId);
@@ -122,7 +122,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     // ========================================================================
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public FertilizationRecommendationDTO getFertilizationRecommendation(Long id) {
         log.info("Getting fertilization recommendation with ID: {}", id);
         FertilizationRecommendation recommendation = fertilizationRepository.findById(id)
@@ -131,7 +131,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<FertilizationRecommendationDTO> getFertilizationRecommendationsByCrop(Long cropId) {
         log.info("Getting fertilization recommendations for crop: {}", cropId);
         return fertilizationRepository.findByCropId(cropId).stream()
@@ -186,7 +186,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     // ========================================================================
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public TreatmentRecommendationDTO getTreatmentRecommendation(Long id) {
         log.info("Getting treatment recommendation with ID: {}", id);
         TreatmentRecommendation recommendation = treatmentRepository.findById(id)
@@ -195,7 +195,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<TreatmentRecommendationDTO> getTreatmentRecommendationsByCrop(Long cropId) {
         log.info("Getting treatment recommendations for crop: {}", cropId);
         return treatmentRepository.findByCropId(cropId).stream()
@@ -204,7 +204,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<TreatmentRecommendationDTO> getUpcomingTreatments(Long cropId) {
         log.info("Getting upcoming treatments for crop: {}", cropId);
         return treatmentRepository.findUpcomingByCropId(cropId, LocalDate.now()).stream()
@@ -245,7 +245,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     // ========================================================================
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public CropPlanDTO getCropPlan(Long id) {
         log.info("Getting crop plan with ID: {}", id);
         CropPlan plan = cropPlanRepository.findById(id)
@@ -254,7 +254,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<CropPlanDTO> getCropPlansByParcel(Long parcelId) {
         log.info("Getting crop plans for parcel: {}", parcelId);
         return cropPlanRepository.findByParcelIdOrderByConfidence(parcelId).stream()
@@ -263,7 +263,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public CropPlanDTO getBestCropPlan(Long parcelId) {
         log.info("Getting best crop plan for parcel: {}", parcelId);
         return cropPlanRepository.findTopByParcelIdOrderByConfidenceScoreDescCreatedAtDesc(parcelId)

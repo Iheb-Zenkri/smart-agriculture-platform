@@ -1,11 +1,21 @@
 server:
-  port: 8080  # API Gateway should use a different port (not 8761)
+  port: 8080
 
 spring:
   application:
     name: api-gateway
   cloud:
     gateway:
+      global-cors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+            allowedHeaders: "*"
+            allowedMethods: "*"
+            allowCredentials: true
+
       discovery:
         locator:
           enabled: true  # Enable automatic route creation

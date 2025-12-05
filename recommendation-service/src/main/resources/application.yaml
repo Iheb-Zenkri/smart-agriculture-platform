@@ -23,12 +23,6 @@ spring:
       printer:
         enabled: true
 
-services:
-  parcel-service:
-    url: http://localhost:8081
-  weather-service:
-    url: http://localhost:8082/ws
-
 logging:
   level:
     com.smartagri.recommendation: DEBUG
